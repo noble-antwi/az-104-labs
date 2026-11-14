@@ -2,7 +2,7 @@
 
 > **Intent:** Settle what a VM is made of (size family, disks, NIC, IP) and prove the billing difference between shutting down inside the OS and deallocating from Azure.
 
-> **Status:** portal build and all three questions tested (14 Nov 2026). Bicep rebuild and the bill still to come. VM is deallocated between sessions.
+> **Status:** portal build and all three questions tested (14 Nov 2026). Rebuilt in Bicep and verified. The bill still to come. VM is deallocated between sessions.
 
 ## What this lab is
 
@@ -271,22 +271,50 @@ step 9 with one narrow rule.
 
 ## Rebuild it as code
 
-Export the portal's template first to see what Azure created:
+[`bicep/main.bicep`](bicep/main.bicep) builds the same seven resources, in the
+order they depend on each other:
 
-```bash
-az group export --name rg-lab-vm > exported-reference.json
+| Portal step | Bicep resource | Note |
+|---|---|---|
+| Networking tab | `vnet` with subnet `snet-eastus-1` | 10.30.0.0/16, 10.30.0.0/24 |
+| Step 9 | `nsg` with `allow-ssh-from-my-ip` | the source address is a parameter |
+| Networking tab | `pip` | Standard, static |
+| (made silently) | `nic` | joins subnet, NSG and public IP; owns the private IP |
+| Basics + Disks | `vm` | Trusted Launch, key-only SSH, OS disk deleted with the VM |
+| Management tab | `shutdown` | name must be `shutdown-computevm-<vm>` for the portal to find it |
+
+Two deliberate differences from the portal build: the OS disk is **Standard
+SSD** (Standard HDD OS disks retire in 2028), and the auto-shutdown time zone
+is **Central Standard Time** (the portal build was set to *Central America* by
+mistake). Email notification is off so no address sits in the template.
+
+Nothing personal is stored: the SSH **public** key and the allowed source
+address are passed at deploy time (Figure 3.14).
+
+```powershell
+cd 03-vm-deep-dive\bicep
+$myIp = Invoke-RestMethod https://api.ipify.org
+$key = (Get-Content $HOME\.ssh\vm-lab-01.pub -Raw).Trim()
+az group create -n rg-lab-vm-iac -l eastus --tags environment=lab purpose=lab lab=vm-deep-dive autoDelete=true -o table
+az deployment group create -g rg-lab-vm-iac --template-file main.bicep `
+  --parameters sshPublicKey="$key" sshSourceAddress="$myIp/32" --query properties.outputs
 ```
 
-Then write `bicep/main.bicep` and deploy to a clean group:
+![Deploy commands for the Bicep rebuild](screenshots/03-14-bicep-deploy-commands.png)
 
-```bash
-az group create --name rg-lab-vm-iac --location eastus \
-  --tags environment=lab purpose=lab lab=vm-deep-dive autoDelete=true
+*Figure 3.14: The Bicep deploy, with the key and address read into variables rather than typed.*
 
-az deployment group create \
-  --resource-group rg-lab-vm-iac \
-  --template-file bicep/main.bicep
-```
+**Result (14 Nov 2026):** the deployment succeeded first time and printed the
+SSH command as an output. Checked from the CLI: seven resources,
+`Standard_D2s_v3`, `StandardSSD_LRS`, password login off, auto-shutdown
+`Enabled 0100 Central Standard Time`. SSH worked straight away with no extra
+step, because the NSG rule was part of the template (Figure 3.15), and the VM
+again reported `10.30.0.4`: the first free address in the subnet (Azure keeps
+.0 to .3 for itself).
+
+![SSH into the Bicep-built VM](screenshots/03-15-bicep-vm-ssh.png)
+
+*Figure 3.15: Signed in to the Bicep-built VM; same private IP, 10.30.0.4.*
 
 ## What I found
 
