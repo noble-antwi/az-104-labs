@@ -343,9 +343,18 @@ read here once it settles.
 
 ## Teardown
 
-Not yet. When the lab is finished:
+The Bicep copy was deleted as soon as it was verified (14 Nov 2026):
+
+```bash
+az group delete --name rg-lab-vm-iac --yes --no-wait
+```
+
+The portal build stays deallocated until the bill is read, then:
 
 ```bash
 az group delete --name rg-lab-vm --yes --no-wait
-az group delete --name rg-lab-vm-iac --yes --no-wait
 ```
+
+`NetworkWatcherRG` is left alone. Azure created it by itself when the first
+virtual network appeared in East US; it holds one free Network Watcher per
+region and is shared by every lab.
