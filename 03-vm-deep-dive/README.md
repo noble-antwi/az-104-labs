@@ -2,7 +2,7 @@
 
 > **Intent:** Settle what a VM is made of (size family, disks, NIC, IP) and prove the billing difference between shutting down inside the OS and deallocating from Azure.
 
-> **Status:** in progress.
+> **Status:** portal build and all three questions tested (14 Nov 2026). Bicep rebuild and the bill still to come. VM is deallocated between sessions.
 
 ## What this lab is
 
@@ -12,8 +12,9 @@ several separate resources: the compute (a **size**), an **OS disk**, a
 security group**. Each is billed and deleted on its own terms, which is where
 most VM surprises on a bill come from.
 
-The lab builds one small Linux VM with **no inbound ports open at all**,
-manages it without SSH, and then tests the two ways of "turning it off".
+The lab builds one small Linux VM with **no inbound ports open**, manages it
+through Run Command, tests the two ways of "turning it off", and then opens
+SSH to one address only.
 
 ## Questions
 
@@ -24,47 +25,60 @@ manages it without SSH, and then tests the two ways of "turning it off".
 3. **What survives a deallocate?** The OS disk, the temporary disk, the public
    IP address, the private IP address.
 
-### Predictions (written before building)
+### Predictions (written before testing)
 
 | # | My prediction | What actually happened |
 |---|---|---|
-| 1 | When the VM is off, the disk still costs money (not sure what else). |  |
-| 2 | Shutting down from inside Linux stops the compute charge; only the disk keeps billing. |  |
-| 3 | A file on the temporary disk (`/mnt`) does not survive: it is ephemeral storage. |  |
+| 1 | The OS disk and the public IP keep costing money when the VM is deallocated. | **Right.** Azure's own Stop prompt says so: compute charges stop, storage and networking continue (Figure 3.7). The other five resources (NIC, NSG, VNet, schedule, the VM's compute) cost nothing while deallocated. |
+| 2 | Shutting down from inside Linux stops the compute charge. | **Wrong.** The portal showed **Stopped**, not *Stopped (deallocated)* (Figure 3.6). The server is still reserved, so compute keeps billing. |
+| 3a | The file on the OS disk is lost. | **Wrong.** It survived (Figure 3.10). |
+| 3b | The file on the temporary disk is lost. | **Right.** *No such file or directory* (Figure 3.10). |
+| 3c | The public IP stays the same: it is static and we created it. | **Right.** |
+| 3d | The private IP changes: the VM can come back on another host. | **Wrong.** It stayed `10.30.0.4` (Figure 3.9). The address belongs to the NIC, and the NIC is not deleted by a deallocate. |
+
+Score on question 3: 2 of 4.
 
 ## Key ideas, from zero
 
 | Term | Plain meaning |
 |---|---|
-| **Size** | The VM's CPU and memory, e.g. `Standard_B2ats_v2` (2 vCPU, 1 GiB) or `Standard_D2als_v6` (2 vCPU, 4 GiB). The family letter says what it is for; **B** is burstable: cheap, banks CPU credits when idle. |
-| **OS disk** | A managed disk holding the operating system. Survives stop and deallocate; billed while it exists. |
-| **Temporary disk** | Fast local storage on the physical host, mounted at `/mnt` on Linux. **Wiped** when the VM moves to another host. |
-| **NIC** | Network interface: connects the VM to a subnet and holds its private IP. |
+| **Size** | The VM's CPU and memory, e.g. `Standard_D2s_v3` (2 vCPU, 8 GiB). In the name, **a** = AMD, **l** = low memory, **d** = has a local temp disk, **s** = can use premium storage. |
+| **OS disk** | A managed disk holding the operating system. Stored apart from the server, so it survives stop and deallocate; billed for its full size while it exists. |
+| **Temporary disk** | Fast local storage on the physical server, mounted at `/mnt` on Linux. Not a resource of its own and not billed separately. **Wiped** when the VM is deallocated. |
+| **NIC** | Network interface: connects the VM to a subnet and **owns** its private IP. |
 | **Public IP** | A separate resource. Standard SKU, static: billed per hour whether the VM runs or not. |
-| **NSG** | Network security group: inbound and outbound allow/deny rules. |
-| **Stopped** | Shut down from inside the OS: the VM still holds its place on the host. |
-| **Stopped (deallocated)** | Stopped from Azure: the host is released. |
-| **Run Command** | Runs a script inside the VM through the Azure agent, with no inbound port needed. |
-| **Auto-shutdown** | A daily deallocate at a set time: the safety net against a forgotten lab VM. |
+| **NSG** | Network security group: the guard at the door. Inbound and outbound allow/deny rules, lowest priority number checked first. |
+| **Stopped** | Shut down from inside the OS. Azure was not told, so the server is still held for you and compute still bills. |
+| **Stopped (deallocated)** | Stopped by Azure (portal Stop, `az vm deallocate`, auto-shutdown). The server is handed back; compute billing ends. |
+| **Run Command** | Runs a script inside the VM through the Azure agent, as root, with no inbound port needed. |
+| **Auto-shutdown** | A daily deallocate at a set time, whether or not someone is working. The safety net against a forgotten lab VM. |
+
+Analogy: a hotel room. Turning off the lights inside is the OS shutdown, and
+the room is still billed. Checking out at the front desk is Azure's Stop.
 
 ## Architecture
 
 ```mermaid
 graph LR
   subgraph RG["rg-lab-vm (East US)"]
-    VNET["vnet-lab-vm 10.30.0.0/16<br/>subnet default 10.30.0.0/24"]
-    NSG["nsg: no inbound rules"]
-    NIC["NIC<br/>private IP"]
+    VNET["vnet-lab-vm 10.30.0.0/16<br/>subnet snet-eastus-1 10.30.0.0/24"]
+    NSG["vm-lab-01-nsg<br/>allow 22 from one IP only"]
+    NIC["NIC vm-lab-01791<br/>private 10.30.0.4"]
     PIP["Public IP<br/>Standard, static"]
-    VM["vm-lab-01<br/>Ubuntu · Standard_D2als_v6"]
-    OS["OS disk<br/>Standard SSD"]
+    VM["vm-lab-01<br/>Ubuntu 24.04 · Standard_D2s_v3"]
+    OS["OS disk 30 GiB<br/>Standard HDD"]
+    TMP["Temp disk 16 GiB<br/>on the host, /mnt"]
+    SCH["Auto-shutdown<br/>01:00 daily"]
   end
   NSG --- NIC
   VNET --- NIC
   PIP --- NIC
   NIC --- VM
   OS --- VM
+  TMP -.- VM
+  SCH -.- VM
   ADMIN["Portal: Run Command"] -. "no inbound port" .-> VM
+  LAPTOP["Admin laptop"] -- "SSH 22, key only" --> PIP
 ```
 
 ## What gets built
@@ -72,20 +86,16 @@ graph LR
 | Resource | SKU / setting | Why it's here |
 |---|---|---|
 | `rg-lab-vm` | resource group, East US | holds the lab |
-| `vm-lab-01` | Ubuntu Server 24.04 LTS, `Standard_D2als_v6` | the cheapest x64 size with quota (see step 2) |
-| OS disk | Standard SSD | survives stop and deallocate; still billed |
-| Virtual network, NIC, public IP, NSG | created with the VM | to see each as its own resource |
-| Inbound ports | **none** | managed through Run Command, never exposed to the internet |
-| Auto-shutdown | daily | the safety net |
+| `vm-lab-01` | Ubuntu Server 24.04 LTS, `Standard_D2s_v3` | see step 2: the planned size did not stick |
+| OS disk | Standard HDD, 30 GiB | survives deallocate; still billed |
+| Temporary disk | 16 GiB, comes with the D2s_v3 size | the thing question 3 tests |
+| `vnet-lab-vm`, `snet-eastus-1` | 10.30.0.0/16, 10.30.0.0/24 | its own small network |
+| NIC, public IP, NSG | created with the VM | to see each as its own resource |
+| Sign-in | SSH key (ed25519) generated locally; password login off | the portal's key download failed twice |
+| Inbound ports | none at build; later **22 from one IP only** | step 9 |
+| Auto-shutdown | daily at 01:00 | the safety net |
 
 ## Build it in the portal
-
-<!--
-The primary record. Numbered steps covering the decisions, not every click.
-Note anything the portal defaulted to that you had to think about, and why
-you chose what you chose. Screenshots go in screenshots/ and are referenced
-inline where they clarify something.
--->
 
 ### 1. Create the resource group
 
@@ -107,29 +117,157 @@ where the lab hit its first real wall:
   *Insufficient quota - family limit*. The subscription's quota for the
   **Basv2 family was 0 vCPUs**, while most D, E and F families had 10.
 - The automatic quota increase to 4 vCPUs was **refused**, so a support
-  request (Basic plan, severity C) went to Microsoft instead.
+  request (Basic plan, severity C) went to Microsoft. It was **approved to 4
+  vCPUs** a day later.
 
 Quota is a ceiling on how many vCPUs of a family can run at once, per region.
 It costs nothing to hold, and keeping it low is a guardrail: nothing can start
-ten VMs by mistake. Rather than wait on the ticket, the lab uses the cheapest
-x64 size that already had quota:
+ten VMs by mistake.
 
-| Size | Per hour | Per month if never stopped |
-|---|---:|---:|
-| Standard_B2ats_v2 (no quota) | $0.0094 | $6.86 |
-| **Standard_D2als_v6** (chosen) | **$0.0804** | $58.69 |
-| Standard_D2s_v3 (portal default) | | $70.08 |
+| Size | Temp disk | Per hour | Per month if never stopped |
+|---|---|---:|---:|
+| Standard_B2ats_v2 | none | $0.0094 | $6.86 |
+| Standard_D2als_v6 | none | $0.0804 | $58.69 |
+| Standard_D2alds_v6 (planned) | yes | $0.0952 | $69.50 |
+| **Standard_D2s_v3** (what was built) | **16 GiB** | **$0.096** | $70.08 |
 
-At a few hours of running time, deallocated in between, the difference is
-cents; the monthly figure only matters for a VM that is left on.
+Question 3 needs a size **with** a temp disk, so the plan was D2alds_v6. The
+first attempt was abandoned when the portal's SSH key download failed; on the
+second, the size change **did not stick** and the VM deployed with the portal
+default, D2s_v3. It has a temp disk and costs the same per hour, so it was
+kept. Lesson: read the size on the Review page, not the Basics tab. The OS disk
+also came out Standard HDD rather than Standard SSD; the portal now warns that
+Standard HDD OS disks retire on 8 September 2028.
+
+At a few hours of running time, deallocated in between, the difference
+between sizes is cents; the monthly figure only matters for a VM left on.
+
+### 3. One VM, seven resources
+
+With **Manage view → Show hidden types** on (the schedule is hidden by
+default), the group holds seven resources for "one VM" (Figure 3.2): the VM,
+its OS disk, NIC, public IP, NSG, virtual network and the auto-shutdown
+schedule.
+
+![The seven resources in rg-lab-vm](screenshots/03-02-rg-seven-resources.png)
+
+*Figure 3.2: The seven resources in rg-lab-vm, with hidden types shown.*
+
+### 4. See the disks from inside
+
+**Run command → RunShellScript**, `lsblk` (Figure 3.3):
+
+| Device | Size | What it is |
+|---|---|---|
+| `sda` | 30G | the OS disk, mounted at `/` |
+| `sdb` | 16G | the temporary disk, mounted at `/mnt` |
+| `sr0` | 628K | a tiny virtual CD Azure uses to pass first-boot settings (the SSH key) |
+
+![lsblk output showing the OS disk and the temporary disk](screenshots/03-03-lsblk-two-disks.png)
+
+*Figure 3.3: lsblk shows two disks: the 30 GiB OS disk and the 16 GiB temporary disk at /mnt.*
+
+### 5. Leave a marker on each disk
+
+```bash
+echo "on the temp disk" > /mnt/proof.txt
+echo "on the OS disk" > /opt/proof.txt
+ls -l /mnt/proof.txt /opt/proof.txt
+```
+
+Run Command runs as root, so no `sudo` (Figure 3.4).
+
+![Both proof files written](screenshots/03-04-proof-files-written.png)
+
+*Figure 3.4: One proof file on the temporary disk, one on the OS disk.*
+
+### 6. Shut down from inside the OS (question 2)
+
+`shutdown -h +1` halts Ubuntu in one minute; the delay lets Run Command report
+back first (Figure 3.5). After refresh the portal shows **Stopped**, not
+*Stopped (deallocated)* (Figure 3.6). Ubuntu stopped; Azure was never told,
+so the server is still reserved and compute still bills.
+
+![shutdown -h +1 scheduled through Run Command](screenshots/03-05-os-shutdown-scheduled.png)
+
+*Figure 3.5: An OS shutdown scheduled from inside the VM.*
+
+![Status Stopped, not deallocated](screenshots/03-06-status-stopped-not-deallocated.png)
+
+*Figure 3.6: After the OS shutdown: Stopped, not Stopped (deallocated). Compute is still billed.*
+
+### 7. Stop from Azure
+
+The portal's **Stop** asks for confirmation and states the billing rule
+itself: compute charges stop, storage and networking continue (Figure 3.7).
+*Force deallocate* was left off; a normal stop shuts the OS down cleanly
+first. The status became **Stopped (deallocated)** (Figure 3.8).
+
+![Stop prompt explaining what deallocation stops billing for](screenshots/03-07-stop-deallocate-prompt.png)
+
+*Figure 3.7: The Stop prompt: compute charges stop, storage and networking keep billing.*
+
+![Status Stopped (deallocated)](screenshots/03-08-stopped-deallocated.png)
+
+*Figure 3.8: Stopped (deallocated). The public and private IPs are still listed while the VM is off.*
+
+### 8. Start it, and check what survived (question 3)
+
+After **Start**, both IP addresses were unchanged (Figure 3.9), and the OS
+disk file was there while the temp disk file was gone (Figure 3.10).
+
+![Running again with the same IPs](screenshots/03-09-running-after-start.png)
+
+*Figure 3.9: Running again after deallocate: same public IP (redacted) and same private IP, 10.30.0.4.*
+
+![OS disk file survives; temp disk file is gone](screenshots/03-10-proof-after-restart.png)
+
+*Figure 3.10: After deallocate and start: the OS disk file survived; the temp disk file did not.*
+
+### 9. Open SSH to one address
+
+The VM was built with *Public inbound ports: None*, so the first SSH attempt
+timed out (see [Break it](#break-it)). An inbound rule lets in port 22 from
+one source address only (Figures 3.11 and 3.12):
+
+| Field | Value | Why |
+|---|---|---|
+| Source | My IP address | only this laptop |
+| Source port | `*` | the client picks a random port; only the VM's end is locked |
+| Destination | Any | the NSG is on this one NIC, so "any" means this VM |
+| Service / port | SSH, TCP 22 | |
+| Priority | 100 | checked long before `DenyAllInBound` at 65500 |
+| Name | `allow-ssh-from-my-ip` | |
+
+![Add inbound security rule for SSH from one IP](screenshots/03-11-nsg-allow-ssh-my-ip.png)
+
+*Figure 3.11: The inbound rule: SSH from one address (redacted), priority 100.*
+
+![NSG rules with the new rule above the defaults](screenshots/03-12-nsg-rules.png)
+
+*Figure 3.12: The new rule sits above the three default inbound rules.*
+
+```powershell
+ssh -i $HOME\.ssh\vm-lab-01 azureuser@<public-ip>
+```
+
+The login banner (Figure 3.13) reports `IPv4 address for eth0: 10.30.0.4`:
+the VM only ever sees its private address. Azure translates the public one at
+the edge, before the NSG checks the traffic, which is also why an NSG rule
+would name the private IP, never the public one.
+
+![SSH session on vm-lab-01](screenshots/03-13-ssh-logged-in.png)
+
+*Figure 3.13: Signed in over SSH with the key; the VM reports only its private IP.*
 
 ## Break it
 
-<!--
-Deliberately misconfigure one thing and record the failure mode. This is
-where most of the learning happens and it is the part people skip.
-What did you break, what error appeared, how did you diagnose it?
--->
+**SSH with no inbound rule.** The first attempt returned
+`ssh: connect to host <public-ip> port 22: Connection timed out`. A timeout
+(not *connection refused*) means the packets were dropped before reaching
+anything: the NSG had only the defaults, and `DenyAllInBound` matches
+internet traffic. A public IP is an address, not an open door. Fixed in
+step 9 with one narrow rule.
 
 ## Rebuild it as code
 
@@ -139,7 +277,7 @@ Export the portal's template first to see what Azure created:
 az group export --name rg-lab-vm > exported-reference.json
 ```
 
-Then write `bicep/main.bicep` yourself and deploy to a clean group:
+Then write `bicep/main.bicep` and deploy to a clean group:
 
 ```bash
 az group create --name rg-lab-vm-iac --location eastus \
@@ -152,20 +290,32 @@ az deployment group create \
 
 ## What I found
 
-<!--
-The answer to the question above, in your own words. Include anything that
-surprised you, anything the documentation got wrong or left out, and the
-one sentence you would want to read back later.
--->
+- **"One VM" is seven resources.** Deleting the VM alone leaves the disk, NIC,
+  IP, NSG and network behind, and two of those keep billing.
+- **Only Azure can stop the bill.** Shutting down inside the OS leaves the VM
+  *Stopped* and still charged. *Stopped (deallocated)* comes only from the
+  portal, the CLI or auto-shutdown.
+- **The OS disk travels with the VM; the temp disk stays with the server.**
+  Anything on `/mnt` is gone after a deallocate. Never keep data there.
+- **IPs belong to the NIC and the public IP resource, not to the server.** Both
+  survived a deallocate, even though the VM most likely came back on a
+  different host.
+- **The portal can silently keep a default.** The size reverted to D2s_v3.
+  Check the Review page.
+
+The sentence to keep: *a stopped VM is not a free VM until Azure says
+"deallocated".*
 
 ## Cost
 
-`Standard_D2als_v6` is about 8 cents per hour of compute while running. The disk and
-the public IP keep billing while the VM is stopped or deallocated, which is
-the point of question 1. Auto-shutdown and deallocating between sessions keep
-the lab to cents.
+`Standard_D2s_v3` is about 9.6 cents per hour of compute while running. While
+deallocated, the OS disk (Standard HDD, billed as 32 GiB, about $1.54 a month)
+and the static public IP (about $3.65 a month) keep billing. The bill will be
+read here once it settles.
 
 ## Teardown
+
+Not yet. When the lab is finished:
 
 ```bash
 az group delete --name rg-lab-vm --yes --no-wait
