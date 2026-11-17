@@ -1,4 +1,4 @@
-# azure-labs
+# az-104-labs
 
 Hands-on Azure infrastructure labs. Each lab is built twice: once by hand in the
 portal to understand what the service actually does, then again as Bicep to make
