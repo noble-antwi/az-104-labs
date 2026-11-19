@@ -9,7 +9,7 @@ video versions: [landscape](diagrams/nested-groups.mp4) ·
 
 > **Intent:** Create users and groups at scale: bulk invite, dynamic membership rules, and group-based licensing, and see where dynamic rules lag.
 
-> **Status:** free-tier parts done (15 to 19 Nov 2026): bulk users, guests, groups, nesting, a role through a nested group, and a Bicep rebuild. Dynamic groups, group-based licensing and SSPR need Entra ID P1 or P2 and are deferred to a P2 trial alongside lab 19.
+> **Status:** free-tier parts done (15 to 19 Nov 2026): bulk users, guests, groups, nesting, a role through a nested group, and a Bicep rebuild, deployed and verified. Dynamic groups, group-based licensing and SSPR need Entra ID P1 or P2 and are deferred to a P2 trial alongside lab 19.
 
 ## What this lab is
 
@@ -225,7 +225,14 @@ cd 05-entra-users-groups\bicep
 az deployment sub create -l eastus -n lab05-groups -f main.bicep --query properties.outputs
 ```
 
-**Result:** `az bicep build` passes. Deployment pending.
+![Bicep deployment outputs](screenshots/05-14-bicep-deploy.png)
+
+*Figure 5.16: The subscription-level deployment: the nested group's ID and the new resource group (group ID redacted).*
+
+**Result (19 Nov 2026):** deployed first time. Checked from the CLI: the two
+team groups hold the same three people each, `L5-IaC-All-Staff` holds the two
+team groups, and `rg-lab-entra-iac` (no resources) has one assignment: Reader
+to `L5-IaC-All-Staff`, type Group.
 
 ## What I found
 
