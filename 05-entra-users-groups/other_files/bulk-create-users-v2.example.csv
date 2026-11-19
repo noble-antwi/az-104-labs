@@ -1,0 +1,7 @@
+﻿Name [displayName] Required,User name [userPrincipalName] Required,Initial password [passwordProfile] Required,Account enabled (true/false) [accountEnabled],First name [givenName],Last name [surname],Job title [jobTitle],Department [department],Usage location [usageLocation]
+Ama Mensah,l5-amensah@biira.online,"<generated at upload, never stored>",false,Ama,Mensah,Branch Manager,Branch Operations,US
+Kofi Boateng,l5-kboateng@biira.online,"<generated at upload, never stored>",false,Kofi,Boateng,Teller,Branch Operations,US
+Efua Asante,l5-easante@biira.online,"<generated at upload, never stored>",false,Efua,Asante,Customer Service Officer,Branch Operations,US
+Yaw Darko,l5-ydarko@biira.online,"<generated at upload, never stored>",false,Yaw,Darko,Treasury Analyst,Treasury,US
+Akosua Owusu,l5-aowusu@biira.online,"<generated at upload, never stored>",false,Akosua,Owusu,Treasury Analyst,Treasury,US
+Kwame Adjei,l5-kadjei@biira.online,"<generated at upload, never stored>",false,Kwame,Adjei,Head of Treasury,Treasury,US

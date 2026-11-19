@@ -9,7 +9,7 @@ video versions: [landscape](diagrams/vm-states.mp4) ·
 
 > **Intent:** Settle what a VM is made of (size family, disks, NIC, IP) and prove the billing difference between shutting down inside the OS and deallocating from Azure.
 
-> **Status:** portal build and all three questions tested (14 Nov 2026). Rebuilt in Bicep and verified. The bill still to come. VM is deallocated between sessions.
+> **Status:** done. Portal build and all three questions tested (14 Nov 2026), rebuilt in Bicep and verified, torn down 19 Nov 2026 after labs 04 and 05 reused the VM.
 
 ## What this lab is
 
@@ -326,8 +326,8 @@ The sentence to keep: *a stopped VM is not a free VM until Azure says
 
 `Standard_D2s_v3` is about 9.6 cents per hour of compute while running. While
 deallocated, the OS disk (Standard HDD, billed as 32 GiB, about $1.54 a month)
-and the static public IP (about $3.65 a month) keep billing. The bill will be
-read here once it settles.
+and the static public IP (about $3.65 a month) keep billing. That is why the
+lab is deleted as soon as nothing else needs it.
 
 ## Teardown
 
@@ -337,7 +337,8 @@ The Bicep copy was deleted as soon as it was verified (14 Nov 2026):
 az group delete --name rg-lab-vm-iac --yes --no-wait
 ```
 
-The portal build stays deallocated until the bill is read, then:
+The portal build was kept, deallocated, for labs 04 and 05, then deleted on
+19 Nov 2026:
 
 ```bash
 az group delete --name rg-lab-vm --yes --no-wait

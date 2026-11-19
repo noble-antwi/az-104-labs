@@ -9,7 +9,7 @@ video versions: [landscape](diagrams/two-planes.mp4) ·
 
 > **Intent:** Build a least-privilege custom RBAC role and test its exact boundaries. Follow-up to lab 01's finding that P1's identity got Contributor where Tag Contributor would do.
 
-> **Status:** built in the portal, every boundary tested, rebuilt in Bicep and verified (14 Nov 2026). Teardown pending.
+> **Status:** built in the portal, every boundary tested, rebuilt in Bicep and verified (14 Nov 2026). `rg-lab-vm` deleted 19 Nov 2026; the two role definitions and the test user remain (free).
 
 ## What this lab is
 
@@ -299,14 +299,12 @@ the lab 03 VM running during the tests (about 10 cents an hour).
 
 ## Teardown
 
-Not yet. When finished:
+`rg-lab-vm` was deleted on 19 Nov 2026, which removed every assignment on it,
+the VM's identity and its extension. Nothing in this lab bills any more. The
+leftovers are free and are removed with:
 
 ```powershell
-# the Bicep copy
-az role assignment delete --assignee lab-vmop@biira.online --role "Lab VM Operator (IaC)" --scope $(az group show -n rg-lab-vm --query id -o tsv)
 az role definition delete --name "Lab VM Operator (IaC)"
+az role definition delete --name "Lab VM Operator"
+az ad user delete --id lab-vmop@biira.online
 ```
-
-Deleting `rg-lab-vm` (lab 03 teardown) removes every assignment on it, plus
-the VM's identity and extension. The portal role definition and the
-`lab-vmop` user stay until deleted on purpose.

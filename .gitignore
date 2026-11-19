@@ -12,6 +12,7 @@
 !*.example.json
 !.vscode/*.json
 !.github/**/*.json
+!**/bicepconfig.json
 
 # Terraform
 .terraform/
@@ -37,3 +38,6 @@ azureProfile.json
 Thumbs.db
 .vscode/
 .idea/
+
+# Lab 05 bulk-create file with generated passwords (upload only, never commit)
+*.WITH-PASSWORDS.csv

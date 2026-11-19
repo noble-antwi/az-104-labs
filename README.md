@@ -5,10 +5,11 @@ portal to understand what the service actually does, then again as Bicep to make
 it repeatable. Each one documents the architecture, the steps, and what came out
 of it.
 
-[![Lab 01: how Azure Policy judged three requests](01-governance-tagging/diagrams/policy-flow.svg)](01-governance-tagging/)
+[![Lab 05: one role reaches eight members through a nested group](05-entra-users-groups/diagrams/nested-groups.svg)](05-entra-users-groups/)
 
-*Latest: [lab 01, governance and tagging](01-governance-tagging/). Four Azure
-Policy rules and a lock, tested until they broke.*
+*Latest: [lab 05, Entra ID users and groups](05-entra-users-groups/). Bulk
+users through Graph when the portal failed, guests, nested groups, and one
+role that reaches people two levels down.*
 
 ## How each lab is structured
 
@@ -59,10 +60,10 @@ for; the list grows as labs are built and larger projects follow.
 
 ### Foundations
 1. [Governance and tagging policy](01-governance-tagging/) · **done** (portal, Bicep, torn down)
-2. [Storage account access tiers](02-storage-tiers/) · **in progress**
-3. [Virtual machine deep dive](03-vm-deep-dive/) · **in progress**
-4. Custom RBAC role
-5. Entra ID users and groups at scale
+2. [Storage account access tiers](02-storage-tiers/) · **done**
+3. [Virtual machine deep dive](03-vm-deep-dive/) · **done** (torn down)
+4. [Custom RBAC role](04-custom-rbac-role/) · **done**
+5. [Entra ID users and groups at scale](05-entra-users-groups/) · **done** (free tier; P2 parts with lab 19)
 6. Azure Files share
 
 ### Composition
