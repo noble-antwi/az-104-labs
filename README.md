@@ -22,11 +22,19 @@ role that reaches people two levels down.*
 
 ## How each lab is run
 
-1. Build it in the portal. Take screenshots of the decisions, not every click.
-2. Break something deliberately and record what happened.
-3. Export the ARM template from the portal to see what Azure created.
-4. Write the Bicep from scratch, deploy to a clean resource group, compare.
-5. Write up findings. Tear everything down.
+1. **Deploy the groundwork from Bicep.** Anything an earlier lab already built
+   by hand (resource groups, storage accounts, VMs, networks, users) is
+   deployed from code at the start. From lab 06 onward, portal time goes only
+   to what is new.
+2. **Build the new part in the portal.** Take screenshots of the decisions,
+   not every click.
+3. Break something deliberately and record what happened.
+4. **Rebuild the new part in Bicep**, deploy it to a clean resource group,
+   compare.
+5. Write up findings. Tear down everything that costs money.
+
+Labs 01 to 05 were built entirely by hand first, because each one introduced
+its groundwork for the first time.
 
 ## Layout
 
