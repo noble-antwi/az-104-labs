@@ -282,7 +282,9 @@ editing a file resets the clock (Figure 2.24).
 
 ![Lifecycle rule tier-by-age: details](screenshots/02-22-lifecycle-rule-details.png)
 
-*Figure 2.24: Lifecycle rule tier-by-age: details. Base blobs* means the current file, as opposed to snapshots or old versions;
+*Figure 2.24: Lifecycle rule tier-by-age: details.*
+
+*Base blobs* means the current file, as opposed to snapshots or old versions;
 real policies often add separate rules to expire old versions, which pile up
 unseen. *Skip blobs rehydrated in the last 7 days* stops a rule from
 re-archiving a file someone has just brought back (Figures 2.25 and 2.26).

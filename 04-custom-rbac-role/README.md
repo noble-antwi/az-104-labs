@@ -87,7 +87,7 @@ delete a VM but cannot log in to it.
 
 ![The wildcard line in the JSON](screenshots/04-03-vm-contributor-json.png)
 
-*Figure 4.5: The JSON view. Line 15, virtualMachines/*, includes delete.*
+*Figure 4.5: The JSON view. Line 15, `virtualMachines/*`, includes delete.*
 
 ### 2. Create the custom role
 
