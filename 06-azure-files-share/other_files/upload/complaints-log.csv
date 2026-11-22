@@ -1,0 +1,5 @@
+date,ticket,category,status,assigned_to
+2026-11-10,C-1041,ATM card retained,closed,Efua Asante
+2026-11-12,C-1042,Long queue at counter,closed,Ama Mensah
+2026-11-15,C-1043,Mobile app login,open,Efua Asante
+2026-11-18,C-1044,Statement request delay,open,Kofi Boateng

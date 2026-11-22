@@ -5,11 +5,11 @@ portal to understand what the service actually does, then again as Bicep to make
 it repeatable. Each one documents the architecture, the steps, and what came out
 of it.
 
-[![Lab 05: one role reaches eight members through a nested group](05-entra-users-groups/diagrams/nested-groups.svg)](05-entra-users-groups/)
+[![Lab 06: one file share, three ways in](06-azure-files-share/diagrams/files-access.svg)](06-azure-files-share/)
 
-*Latest: [lab 05, Entra ID users and groups](05-entra-users-groups/). Bulk
-users through Graph when the portal failed, guests, nested groups, and one
-role that reaches people two levels down.*
+*Latest: [lab 06, Azure Files](06-azure-files-share/). Port 445 blocked from
+home, snapshots and restore, Entra data roles instead of the storage key, and
+what breaks the moment keys are switched off.*
 
 ## How each lab is structured
 
@@ -72,7 +72,7 @@ for; the list grows as labs are built and larger projects follow.
 3. [Virtual machine deep dive](03-vm-deep-dive/) · **done** (torn down)
 4. [Custom RBAC role](04-custom-rbac-role/) · **done**
 5. [Entra ID users and groups at scale](05-entra-users-groups/) · **done** (free tier; P2 parts with lab 19)
-6. Azure Files share
+6. [Azure Files share](06-azure-files-share/) · **done** (torn down)
 
 ### Composition
 7. Three-tier virtual network
